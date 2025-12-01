@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>ライン外作業タイマー記録</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      padding: 16px;
+      margin: 0;
+      background: #f5f5f7;
+    }
+    h1 {
+      font-size: 20px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    label {
+      display: block;
+      margin-top: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    input, textarea {
+      width: 100%;
+      font-size: 15px;
+      padding: 8px;
+      box-sizing: border-box;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-top: 4px;
+    }
+    textarea {
+      height: 220px;
+      resize: vertical;
+    }
+
+    .task-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 8px 0 4px 0;
+    }
+    .task-btn {
+      flex: 1 1 calc(50% - 8px);
+      min-width: 140px;
+      padding: 10px 8px;
+      font-size: 14px;
+      border-radius: 10px;
+      border: none;
+      background: #e5e5ea;
+      color: #111;
+      text-align: center;
+    }
+    .task-btn.selected {
+      background: #007aff;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .selected-task {
+      font-size: 13px;
+      margin-bottom: 4px;
+      color: #555;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .btn {
+      flex: 1;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+    }
+    .btn-start {
+      background: #34c759;
+    }
+    .btn-stop {
+      background: #ff3b30;
+    }
+    .btn-disabled {
+      opacity: 0.4;
+    }
+    .btn-copy {
+      background: #5856d6;
+      margin-top: 10px;
+      width: 100%;
+    }
+    .btn-edit {
+      background: #8e8e93;
+      margin-top: 10px;
+      width: 100%;
+    }
+
+    .log-info {
+      font-size: 12px;
+      color: #666;
+      margin-top: 6px;
+    }
+    .status {
+      margin-top: 8px;
+      font-size: 14px;
+      min-height: 20px;
+    }
+
+    .edit-panel {
+      margin-top: 14px;
+      padding: 10px;
+      background: #ffffff;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+    }
+    .edit-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .edit-row input {
+      flex: 1;
+      margin-top: 0;
+    }
+    .edit-row button {
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: none;
+      background: #ff3b30;
+      color: #fff;
+      font-size: 12px;
+    }
+    .small-btn {
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: none;
+      font-size: 13px;
+      color: #fff;
+      background: #007aff;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>ライン外作業タイマー記録</h1>
+
+  <!-- 要素ボタンエリア -->
+  <label>要素作業</label>
+  <div class="task-buttons" id="taskButtons"></div>
+  <div class="selected-task" id="selectedTaskLabel">（要素を選択してください）</div>
+
+  <!-- 作業者名 -->
+  <label>作業者名（任意）</label>
+  <input type="text" id="workerName" placeholder="Aさん など">
+
+  <!-- START / STOP ボタン -->
+  <div class="btn-row">
+    <button id="startBtn" class="btn btn-start">▶ START（計測開始）</button>
+    <button id="stopBtn" class="btn btn-stop btn-disabled" disabled>■ STOP ＆ 記録</button>
+  </div>
+
+  <div class="status" id="statusArea"></div>
+
+  <!-- 記録テキスト -->
+  <div class="log-info">記録（このままExcelに貼り付け可）</div>
+  <textarea id="logArea"></textarea>
+  <button id="copyBtn" class="btn btn-copy">全コピー（Excel貼り付け用）</button>
+
+  <!-- 要素編集ボタン -->
+  <button id="editToggleBtn" class="btn btn-edit">✏️ 要素編集</button>
+
+  <!-- 要素編集パネル -->
+  <div id="editPanel" class="edit-panel" style="display:none;">
+    <div style="font-size:13px; margin-bottom:6px;">要素名を編集して「保存」すると次回以降も保持されます（この端末ごとに保存）。</div>
+    <div id="editRows"></div>
+    <button id="addTaskBtn" class="small-btn">＋ 要素を追加</button>
+    <button id="saveTaskBtn" class="small-btn" style="background:#34c759;">💾 保存</button>
+  </div>
+
+  <script>
+    // デフォルト要素
+    const DEFAULT_TASKS = [
+      "部品運搬",
+      "品番確認",
+      "棚番検索",
+      "フォークリフト待ち",
+      "製品仮置き",
+      "手直し作業",
+      "社員呼び出し"
+    ];
+
+    const STORAGE_KEY = "line_timer_tasks_v1";
+
+    let tasks = [];
+    let selectedTask = null;
+    let startTime = null;
+
+    const taskButtonsDiv = document.getElementById("taskButtons");
+    const selectedTaskLabel = document.getElementById("selectedTaskLabel");
+    const workerNameInput = document.getElementById("workerName");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const statusArea = document.getElementById("statusArea");
+    const logArea = document.getElementById("logArea");
+    const copyBtn = document.getElementById("copyBtn");
+    const editToggleBtn = document.getElementById("editToggleBtn");
+    const editPanel = document.getElementById("editPanel");
+    const editRows = document.getElementById("editRows");
+    const addTaskBtn = document.getElementById("addTaskBtn");
+    const saveTaskBtn = document.getElementById("saveTaskBtn");
+
+    // ---- 初期化 ----
+    function loadTasks() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          const arr = JSON.parse(saved);
+          if (Array.isArray(arr) && arr.length > 0) {
+            tasks = arr;
+            return;
+          }
+        } catch (e) {
+          console.warn("タスク読み込みエラー", e);
+        }
+      }
+      tasks = DEFAULT_TASKS.slice();
+    }
+
+    function saveTasks() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    }
+
+    function renderTaskButtons() {
+      taskButtonsDiv.innerHTML = "";
+      tasks.forEach((task, index) => {
+        const btn = document.createElement("button");
+        btn.textContent = task;
+        btn.className = "task-btn" + (task === selectedTask ? " selected" : "");
+        btn.addEventListener("click", () => {
+          selectedTask = task;
+          updateSelectedTaskLabel();
+          renderTaskButtons();
+        });
+        taskButtonsDiv.appendChild(btn);
+      });
+    }
+
+    function updateSelectedTaskLabel() {
+      if (selectedTask) {
+        selectedTaskLabel.textContent = "選択中の要素： " + selectedTask;
+      } else {
+        selectedTaskLabel.textContent = "（要素を選択してください）";
+      }
+    }
+
+    function initLogHeaderIfEmpty() {
+      if (!logArea.value.trim()) {
+        logArea.value = "要素作業,開始時刻,終了時刻,計測秒,計測日,作業者\n";
+      }
+    }
+
+    // ---- タイマー処理 ----
+    startBtn.addEventListener("click", () => {
+      if (!selectedTask) {
+        alert("要素作業を選択してください。");
+        return;
+      }
+      if (startTime) {
+        alert("すでに計測中です。STOPを押してください。");
+        return;
+      }
+      startTime = new Date();
+      statusArea.textContent = "計測中… " + formatTime(startTime) + " ～";
+      startBtn.classList.add("btn-disabled");
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      stopBtn.classList.remove("btn-disabled");
+    });
+
+    stopBtn.addEventListener("click", () => {
+      if (!startTime) {
+        alert("まだ計測が開始されていません。");
+        return;
+      }
+      const endTime = new Date();
+      const diffSec = Math.round((endTime - startTime) / 1000);
+      const dateStr = formatDate(endTime);
+      const startStr = formatDateTime(startTime);
+      const endStr = formatDateTime(endTime);
+      const worker = workerNameInput.value || "";
+
+      initLogHeaderIfEmpty();
+      const line = [
+        selectedTask,
+        startStr,
+        endStr,
+        diffSec,
+        dateStr,
+        worker
+      ].join(",") + "\n";
+      logArea.value += line;
+
+      statusArea.textContent =
+        "記録しました：" + selectedTask + " " +
+        startStr + " → " + endStr + "（" + diffSec + "秒）";
+
+      startTime = null;
+      startBtn.disabled = false;
+      startBtn.classList.remove("btn-disabled");
+      stopBtn.disabled = true;
+      stopBtn.classList.add("btn-disabled");
+    });
+
+    // ---- コピー ----
+    copyBtn.addEventListener("click", () => {
+      logArea.select();
+      document.execCommand("copy");
+      statusArea.textContent = "テキストをコピーしました。Excelに貼り付けてください。";
+    });
+
+    // ---- 要素編集パネル ----
+    editToggleBtn.addEventListener("click", () => {
+      const visible = editPanel.style.display !== "none";
+      if (visible) {
+        editPanel.style.display = "none";
+        editToggleBtn.textContent = "✏️ 要素編集";
+      } else {
+        buildEditRows();
+        editPanel.style.display = "block";
+        editToggleBtn.textContent = "✏️ 要素編集を閉じる";
+      }
+    });
+
+    function buildEditRows() {
+      editRows.innerHTML = "";
+      tasks.forEach((task, index) => {
+        const row = document.createElement("div");
+        row.className = "edit-row";
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = task;
+        input.dataset.index = index;
+
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "削除";
+        delBtn.addEventListener("click", () => {
+          tasks.splice(index, 1);
+          buildEditRows();
+          renderTaskButtons();
+          saveTasks();
+        });
+
+        row.appendChild(input);
+        row.appendChild(delBtn);
+        editRows.appendChild(row);
+      });
+    }
+
+    addTaskBtn.addEventListener("click", () => {
+      tasks.push("新しい要素");
+      buildEditRows();
+      renderTaskButtons();
+      saveTasks();
+    });
+
+    saveTaskBtn.addEventListener("click", () => {
+      const inputs = editRows.querySelectorAll("input[type='text']");
+      const newTasks = [];
+      inputs.forEach(inp => {
+        const v = inp.value.trim();
+        if (v) newTasks.push(v);
+      });
+      if (newTasks.length === 0) {
+        alert("少なくとも1つは要素を残してください。");
+        return;
+      }
+      tasks = newTasks;
+      saveTasks();
+      renderTaskButtons();
+      if (!tasks.includes(selectedTask)) {
+        selectedTask = null;
+        updateSelectedTaskLabel();
+      }
+      statusArea.textContent = "要素名を保存しました。";
+      alert("要素名を保存しました。");
+    });
+
+    // ---- 日時フォーマット ----
+    function pad(n) {
+      return n.toString().padStart(2, "0");
+    }
+
+    function formatDate(d) {
+      const y = d.getFullYear();
+      const m = pad(d.getMonth() + 1);
+      const day = pad(d.getDate());
+      return `${y}-${m}-${day}`;
+    }
+
+    function formatTime(d) {
+      const h = pad(d.getHours());
+      const m = pad(d.getMinutes());
+      const s = pad(d.getSeconds());
+      return `${h}:${m}:${s}`;
+    }
+
+    function formatDateTime(d) {
+      return `${formatDate(d)} ${formatTime(d)}`;
+    }
+
+    // ---- ページ読み込み時 ----
+    window.addEventListener("load", () => {
+      loadTasks();
+      renderTaskButtons();
+      updateSelectedTaskLabel();
+      initLogHeaderIfEmpty();
+    });
+  </script>
+</body>
+</html>
