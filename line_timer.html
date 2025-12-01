@@ -2,520 +2,566 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>ライン外作業タイマー記録</title>
+  <title>ライン外作業タイマー記録（新）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style>
     :root {
-      --main-bg: #f5f7fb;
+      --accent: #007aff;
+      --accent-soft: #e5f0ff;
+      --danger: #ff3b30;
+      --bg: #f5f5f7;
       --card-bg: #ffffff;
-      --accent: #2563eb;
-      --accent-soft: #e0ecff;
-      --border: #d1d5db;
-      --text-main: #111827;
-      --text-sub: #6b7280;
+      --text-main: #111111;
+      --text-sub: #666666;
+      --border: #dddddd;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+      --shadow-soft: 0 10px 25px rgba(0,0,0,0.08);
     }
 
     * {
       box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
     }
 
     body {
-      margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: radial-gradient(circle at top, #e0ebff, #f5f7fb 45%, #f9fafb);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #fdfbff 0%, #f4f5f8 40%, #f1f2f5 100%);
       color: var(--text-main);
+      padding: 12px;
     }
 
     .app {
-      max-width: 560px;
-      margin: 0 auto;
-      padding: 16px 16px 40px;
+      max-width: 480px;
+      margin: 0 auto 40px auto;
     }
 
-    h1 {
+    header {
+      padding: 12px 4px 20px 4px;
+    }
+
+    header h1 {
       font-size: 22px;
       font-weight: 700;
-      margin: 4px 0 16px;
+      letter-spacing: 0.03em;
+      margin-bottom: 4px;
     }
 
-    .version {
-      font-size: 11px;
+    header p {
+      font-size: 12px;
       color: var(--text-sub);
-      margin-bottom: 8px;
     }
 
     .card {
-      background: rgba(255,255,255,0.9);
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(15,23,42,0.08);
-      padding: 14px 16px 16px;
-      margin-bottom: 12px;
-      border: 1px solid rgba(148,163,184,0.35);
-      backdrop-filter: blur(10px);
+      background: var(--card-bg);
+      border-radius: 24px;
+      box-shadow: var(--shadow-soft);
+      padding: 16px 16px 20px 16px;
+      margin-bottom: 16px;
     }
 
-    .card-header {
+    .section-title {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
-    .card-title {
-      font-size: 14px;
+    .section-title span {
+      font-size: 13px;
       font-weight: 600;
-      letter-spacing: 0.03em;
     }
 
-    .badge {
+    .section-title small {
       font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: var(--accent-soft);
-      color: var(--accent);
+      color: var(--text-sub);
     }
 
-    /* 要素作業ボタン群 */
-    .task-buttons {
-      display: flex;
-      flex-wrap: wrap;
+    /* タスクボタン群 */
+    .task-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 8px;
+      margin-top: 4px;
     }
 
     .task-btn {
-      flex: 1 1 calc(50% - 4px);   /* 2列レイアウト（スマホ） */
-      min-width: 140px;
-      border-radius: 12px;
+      border-radius: 999px;
       border: 1px solid var(--border);
-      background: #f9fafb;
-      padding: 10px 8px;
-      font-size: 14px;
+      background: #ffffff;
+      padding: 10px 12px;
+      font-size: 13px;
       text-align: center;
       cursor: pointer;
-      transition: 0.15s all ease-out;
-      box-shadow: 0 1px 2px rgba(15,23,42,0.05);
       user-select: none;
-    }
-
-    .task-btn span {
-      display: inline-block;
-      max-width: 100%;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      transition: all 0.12s ease-out;
     }
 
-    .task-btn.active {
-      background: linear-gradient(135deg,#2563eb,#4f46e5);
+    .task-btn.selected {
+      background: var(--accent);
       color: #ffffff;
-      border-color: transparent;
-      box-shadow: 0 6px 18px rgba(37,99,235,0.4);
+      border-color: var(--accent);
+      box-shadow: 0 4px 14px rgba(0,122,255,0.35);
       transform: translateY(-1px);
     }
 
     .task-btn:active {
-      transform: translateY(0);
-      box-shadow: 0 3px 10px rgba(15,23,42,0.25);
+      transform: scale(0.98);
+      opacity: 0.9;
     }
 
-    /* 編集トグル */
-    .edit-toggle {
+    .task-edit-btn {
       font-size: 11px;
       color: var(--accent);
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 8px;
+      background: transparent;
+      border: none;
+      padding: 4px 6px;
       border-radius: 999px;
-      border: 1px solid var(--accent-soft);
-      background: #f9fafb;
       cursor: pointer;
     }
 
-    .edit-area {
-      margin-top: 8px;
-      display: none;
+    /* 作業者名 */
+    .field {
+      margin-top: 10px;
     }
 
-    .edit-area textarea {
-      width: 100%;
-      min-height: 80px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      padding: 8px 10px;
-      font-size: 13px;
-      resize: vertical;
-    }
-
-    .edit-buttons {
-      margin-top: 6px;
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-    }
-
-    .btn-small {
+    .field label {
       font-size: 12px;
-      padding: 5px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: #f9fafb;
-      cursor: pointer;
-    }
-
-    .btn-small.primary {
-      border-color: var(--accent);
-      background: var(--accent);
-      color: #fff;
-    }
-
-    label {
-      font-size: 13px;
       color: var(--text-sub);
       display: block;
       margin-bottom: 4px;
     }
 
-    input[type="text"] {
+    .field input {
       width: 100%;
-      border-radius: 10px;
+      padding: 10px 12px;
+      border-radius: 999px;
       border: 1px solid var(--border);
-      padding: 8px 10px;
       font-size: 14px;
     }
 
-    /* START / STOP */
-    .timer-controls {
-      display: grid;
-      grid-template-columns: 1fr;
+    /* 大きいボタン */
+    .main-buttons {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
       gap: 10px;
     }
 
     .btn-main {
       width: 100%;
-      padding: 12px 16px;
       border-radius: 999px;
       border: none;
+      padding: 14px;
       font-size: 16px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
+      font-weight: 700;
+      letter-spacing: 0.06em;
       cursor: pointer;
-      transition: 0.15s all ease-out;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, opacity 0.08s;
+    }
+
+    .btn-main span.icon {
+      font-size: 18px;
     }
 
     .btn-start {
-      background: linear-gradient(135deg,#1d4ed8,#22c55e);
-      color: #fff;
-      box-shadow: 0 10px 24px rgba(22,163,74,0.45);
-    }
-
-    .btn-start:disabled {
-      background: #e5e7eb;
-      color: #9ca3af;
-      box-shadow: none;
-      cursor: not-allowed;
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 10px 22px rgba(0,122,255,0.3);
     }
 
     .btn-stop {
-      background: #e5e7eb;
-      color: #6b7280;
+      background: #ffffff;
+      color: var(--danger);
+      border: 1px solid rgba(255,59,48,0.6);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.09);
     }
 
-    .btn-stop.running {
-      background: linear-gradient(135deg,#f97316,#ef4444);
-      color: #fff;
-      box-shadow: 0 10px 24px rgba(239,68,68,0.45);
-    }
-
-    .btn-stop:disabled {
-      opacity: 0.7;
-      cursor: not-allowed;
+    .btn-main:active {
+      transform: translateY(1px);
       box-shadow: none;
+      opacity: 0.9;
     }
 
-    .status {
-      font-size: 12px;
+    .btn-main:disabled {
+      opacity: 0.4;
+      box-shadow: none;
+      cursor: default;
+      transform: none;
+    }
+
+    /* ステータス */
+    .status-row {
+      margin-top: 6px;
+      font-size: 11px;
       color: var(--text-sub);
-      margin-top: 4px;
+      display: flex;
+      justify-content: space-between;
     }
 
-    textarea.log {
+    .status-row strong {
+      color: var(--accent);
+    }
+
+    /* ログエリア */
+    .log-card {
+      padding-top: 12px;
+    }
+
+    .log-header {
+      font-size: 12px;
+      margin-bottom: 6px;
+      color: var(--text-sub);
+    }
+
+    textarea#log {
       width: 100%;
-      min-height: 200px;
+      height: 220px;
       border-radius: 12px;
       border: 1px solid var(--border);
-      padding: 10px 12px;
-      font-size: 13px;
+      padding: 10px;
+      font-size: 12px;
       resize: vertical;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+      background: #fafafa;
     }
 
     .copy-row {
-      display: flex;
-      justify-content: flex-end;
       margin-top: 8px;
+      text-align: right;
     }
 
-    .copy-btn {
+    .btn-copy {
+      font-size: 11px;
       border-radius: 999px;
-      border: 1px solid var(--accent);
-      background: #fff;
-      color: var(--accent);
-      padding: 6px 14px;
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      background: #ffffff;
+      cursor: pointer;
+    }
+
+    /* タスク編集モーダル（簡易） */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+
+    .modal {
+      width: min(420px, 100% - 32px);
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 14px 14px 12px 14px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.25);
+    }
+
+    .modal h2 {
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+
+    .modal p {
+      font-size: 11px;
+      color: var(--text-sub);
+      margin-bottom: 8px;
+    }
+
+    .modal textarea {
+      width: 100%;
+      height: 140px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 8px;
+      font-size: 12px;
+      resize: vertical;
+    }
+
+    .modal-actions {
+      margin-top: 10px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .btn-secondary {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      padding: 6px 12px;
       font-size: 12px;
       cursor: pointer;
     }
 
-    @media (min-width: 720px) {
-      .task-btn {
-        flex: 1 1 calc(33.33% - 6px); /* PC で3列に */
-      }
+    .btn-primary {
+      border-radius: 999px;
+      border: none;
+      background: var(--accent);
+      color: #ffffff;
+      padding: 6px 16px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    @media (min-width: 520px) {
+      body { padding-top: 18px; }
     }
   </style>
 </head>
 <body>
-<div class="app">
-  <h1>ライン外作業タイマー記録</h1>
-  <div class="version">UI Ver. 2（ボタン＋要素編集対応）</div>
+  <div class="app">
+    <header>
+      <h1>ライン外作業タイマー記録</h1>
+      <p>スマホ用・現場タイマー</p>
+    </header>
 
-  <!-- 要素作業カード -->
-  <div class="card">
-    <div class="card-header">
-      <div class="card-title">要素作業</div>
-      <button id="editToggle" class="edit-toggle" type="button">
-        ⚙ リスト編集
-      </button>
-    </div>
+    <!-- タスク選択カード -->
+    <section class="card">
+      <div class="section-title">
+        <span>要素作業</span>
+        <button class="task-edit-btn" id="openTaskEdit">タスクを編集</button>
+      </div>
+      <div id="taskGrid" class="task-grid">
+        <!-- JSでボタンを生成 -->
+      </div>
 
-    <div id="taskButtons" class="task-buttons">
-      <!-- JSでボタンを生成 -->
-    </div>
+      <div class="field">
+        <label for="workerName">作業者名（任意）</label>
+        <input id="workerName" type="text" placeholder="Aさん">
+      </div>
 
-    <!-- 編集エリア -->
-    <div id="editArea" class="edit-area">
-      <label>要素作業リスト（1行につき1つ）</label>
+      <div class="main-buttons">
+        <button id="startBtn" class="btn-main btn-start">
+          <span class="icon">▶︎</span><span>START（計測開始）</span>
+        </button>
+        <button id="stopBtn" class="btn-main btn-stop" disabled>
+          <span class="icon">■</span><span>STOP ＆ 記録</span>
+        </button>
+      </div>
+
+      <div class="status-row">
+        <div>状態：<strong id="statusText">待機中</strong></div>
+        <div id="currentTaskLabel"></div>
+      </div>
+    </section>
+
+    <!-- ログカード -->
+    <section class="card log-card">
+      <div class="log-header">
+        記録（このままExcelに貼り付け可）<br>
+        項目：要素作業,開始時刻,終了時刻,計測秒,計測日,作業者
+      </div>
+      <textarea id="log"></textarea>
+      <div class="copy-row">
+        <button id="copyBtn" class="btn-copy">全コピー（Excel貼り付け用）</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- タスク編集モーダル -->
+  <div id="taskModalBackdrop" class="modal-backdrop">
+    <div class="modal">
+      <h2>要素作業を編集</h2>
+      <p>1行につき1つの作業名を書いてください。変更内容はこの端末のブラウザに保存されます。</p>
       <textarea id="taskEditor"></textarea>
-      <div class="edit-buttons">
-        <button id="editCancel" class="btn-small" type="button">キャンセル</button>
-        <button id="editSave" class="btn-small primary" type="button">保存</button>
+      <div class="modal-actions">
+        <button id="cancelTaskEdit" class="btn-secondary">キャンセル</button>
+        <button id="saveTaskEdit" class="btn-primary">保存</button>
       </div>
     </div>
   </div>
 
-  <!-- 作業者カード -->
-  <div class="card">
-    <div class="card-header">
-      <div class="card-title">作業者名（任意）</div>
-      <span class="badge">例：Aさん</span>
-    </div>
-    <input type="text" id="workerName" placeholder="Aさん">
-  </div>
+  <script>
+    // ---- 設定値 ----
+    const DEFAULT_TASKS = [
+      "部品運搬",
+      "品番確認",
+      "棚番検索",
+      "フォークリフト待ち",
+      "製品仮置き",
+      "手直し作業",
+      "社員呼び出し"
+    ];
 
-  <!-- タイマー操作 -->
-  <div class="card">
-    <div class="card-header">
-      <div class="card-title">タイマー</div>
-    </div>
-    <div class="timer-controls">
-      <button id="startBtn" class="btn-main btn-start" type="button">
-        ▶ START（計測開始）
-      </button>
-      <button id="stopBtn" class="btn-main btn-stop" type="button" disabled>
-        ■ STOP &amp; 記録
-      </button>
-    </div>
-    <div id="statusText" class="status">待機中</div>
-  </div>
+    const STORAGE_TASKS_KEY = "lineTimerTasks_v1";
 
-  <!-- ログ表示 -->
-  <div class="card">
-    <div class="card-header">
-      <div class="card-title">記録（このままExcelに貼り付け可）</div>
-    </div>
-    <textarea id="logArea" class="log" readonly></textarea>
-    <div class="copy-row">
-      <button id="copyBtn" class="copy-btn" type="button">
-        全コピー（Excel貼り付け用）
-      </button>
-    </div>
-  </div>
-</div>
+    // ---- 状態管理 ----
+    let tasks = [];
+    let currentTask = null;
+    let startTime = null;
 
-<script>
-  // --- 初期データ ---
-  const DEFAULT_TASKS = [
-    "部品運搬",
-    "品番確認",
-    "棚番検索",
-    "フォークリフト待ち",
-    "製品仮置き",
-    "手直し作業",
-    "社員呼び出し"
-  ];
+    const taskGrid = document.getElementById("taskGrid");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const workerNameInput = document.getElementById("workerName");
+    const statusText = document.getElementById("statusText");
+    const currentTaskLabel = document.getElementById("currentTaskLabel");
+    const logArea = document.getElementById("log");
 
-  const STORAGE_KEY = "line_timer_tasks_v2";
-
-  let tasks = [];
-  let currentTask = "";
-  let startTime = null;
-  let timerRunning = false;
-
-  const taskButtonsContainer = document.getElementById("taskButtons");
-  const taskEditor = document.getElementById("taskEditor");
-  const editArea = document.getElementById("editArea");
-  const editToggle = document.getElementById("editToggle");
-  const editSave = document.getElementById("editSave");
-  const editCancel = document.getElementById("editCancel");
-  const workerNameInput = document.getElementById("workerName");
-  const startBtn = document.getElementById("startBtn");
-  const stopBtn = document.getElementById("stopBtn");
-  const logArea = document.getElementById("logArea");
-  const statusText = document.getElementById("statusText");
-  const copyBtn = document.getElementById("copyBtn");
-
-  // 日付フォーマット
-  function formatDateTime(d){
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth()+1).padStart(2,"0");
-    const dd = String(d.getDate()).padStart(2,"0");
-    const hh = String(d.getHours()).padStart(2,"0");
-    const mi = String(d.getMinutes()).padStart(2,"0");
-    const ss = String(d.getSeconds()).padStart(2,"0");
-    return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
-  }
-
-  function formatDate(d){
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth()+1).padStart(2,"0");
-    const dd = String(d.getDate()).padStart(2,"0");
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
-  // 要素ボタンを描画
-  function renderTaskButtons(){
-    taskButtonsContainer.innerHTML = "";
-    tasks.forEach((task, index) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "task-btn" + (task === currentTask ? " active" : "");
-      btn.dataset.index = index;
-      btn.innerHTML = `<span>${task}</span>`;
-      btn.addEventListener("click", () => selectTask(task));
-      taskButtonsContainer.appendChild(btn);
-    });
-  }
-
-  function selectTask(task){
-    currentTask = task;
-    Array.from(taskButtonsContainer.children).forEach(btn => {
-      btn.classList.toggle("active", btn.textContent.trim() === task);
-    });
-    statusText.textContent = `選択中の要素作業：${task}`;
-  }
-
-  // 編集モード切替
-  function openEditMode(){
-    editArea.style.display = "block";
-    taskEditor.value = tasks.join("\n");
-  }
-
-  function closeEditMode(){
-    editArea.style.display = "none";
-  }
-
-  editToggle.addEventListener("click", () => {
-    if(editArea.style.display === "block"){
-      closeEditMode();
-    } else {
-      openEditMode();
-    }
-  });
-
-  editCancel.addEventListener("click", () => {
-    closeEditMode();
-  });
-
-  editSave.addEventListener("click", () => {
-    const lines = taskEditor.value
-      .split("\n")
-      .map(s => s.trim())
-      .filter(s => s.length > 0);
-
-    if(lines.length === 0){
-      alert("1つ以上の要素作業を入力してください。");
-      return;
-    }
-    tasks = lines;
-    currentTask = tasks[0];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-    renderTaskButtons();
-    selectTask(currentTask);
-    closeEditMode();
-  });
-
-  // START / STOP
-  startBtn.addEventListener("click", () => {
-    if(!currentTask){
-      alert("要素作業を選択してください。");
-      return;
-    }
-    startTime = new Date();
-    timerRunning = true;
-    startBtn.disabled = true;
-    stopBtn.disabled = false;
-    stopBtn.classList.add("running");
-    statusText.textContent = `計測中：${currentTask}（開始 ${formatDateTime(startTime)}）`;
-  });
-
-  stopBtn.addEventListener("click", () => {
-    if(!timerRunning || !startTime) return;
-    const endTime = new Date();
-    const diffSec = Math.round((endTime - startTime)/1000);
-    const dateStr = formatDate(startTime);
-    const worker = workerNameInput.value.trim() || "Aさん";
-
-    // ヘッダー行がなければ先頭に付ける
-    if(!logArea.value.includes("要素作業,開始時刻,終了時刻,計測秒,計測日,作業者")){
-      logArea.value = "要素作業,開始時刻,終了時刻,計測秒,計測日,作業者\n";
-    }
-
-    const line = `${currentTask},${formatDateTime(startTime)},${formatDateTime(endTime)},${diffSec},${dateStr},${worker}`;
-    logArea.value += line + "\n";
-
-    statusText.textContent = `記録しました：${line}`;
-    timerRunning = false;
-    startTime = null;
-    startBtn.disabled = false;
-    stopBtn.disabled = true;
-    stopBtn.classList.remove("running");
-  });
-
-  // 全コピー
-  copyBtn.addEventListener("click", () => {
-    logArea.select();
-    document.execCommand("copy");
-    statusText.textContent = "コピーしました（Excelに貼り付けてください）";
-  });
-
-  // 初期化
-  function init(){
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if(saved){
-      try {
-        tasks = JSON.parse(saved);
-      } catch(e){
-        tasks = [...DEFAULT_TASKS];
+    // ---- 初期化 ----
+    function loadTasks() {
+      const stored = localStorage.getItem(STORAGE_TASKS_KEY);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            tasks = parsed;
+            return;
+          }
+        } catch(e) {}
       }
-    } else {
-      tasks = [...DEFAULT_TASKS];
+      tasks = DEFAULT_TASKS.slice();
     }
-    currentTask = tasks[0];
-    renderTaskButtons();
-    selectTask(currentTask);
-  }
 
-  init();
-</script>
+    function saveTasks() {
+      localStorage.setItem(STORAGE_TASKS_KEY, JSON.stringify(tasks));
+    }
+
+    function renderTaskButtons() {
+      taskGrid.innerHTML = "";
+      tasks.forEach((task) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = task;
+        btn.className = "task-btn";
+        if (task === currentTask) btn.classList.add("selected");
+        btn.addEventListener("click", () => {
+          currentTask = task;
+          updateStatus();
+          renderTaskButtons();
+        });
+        taskGrid.appendChild(btn);
+      });
+    }
+
+    function updateStatus() {
+      if (!currentTask) {
+        statusText.textContent = "要素作業を選択してください";
+        currentTaskLabel.textContent = "";
+      } else if (startTime) {
+        statusText.textContent = "計測中…";
+        currentTaskLabel.textContent = "作業：" + currentTask;
+      } else {
+        statusText.textContent = "待機中";
+        currentTaskLabel.textContent = "選択中：" + currentTask;
+      }
+    }
+
+    // ---- 計測 ----
+    startBtn.addEventListener("click", () => {
+      if (!currentTask) {
+        alert("要素作業を選択してください。");
+        return;
+      }
+      startTime = new Date();
+      updateStatus();
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+    });
+
+    stopBtn.addEventListener("click", () => {
+      if (!startTime || !currentTask) return;
+
+      const endTime = new Date();
+      const diffSec = Math.round((endTime - startTime) / 1000);
+      const dateStr = startTime.toISOString().slice(0,10);
+      const startStr = formatDateTime(startTime);
+      const endStr = formatDateTime(endTime);
+      const worker = workerNameInput.value || "Aさん";
+
+      const line = [
+        currentTask,
+        startStr,
+        endStr,
+        diffSec,
+        dateStr,
+        worker
+      ].join(",") + "\\n";
+
+      if (!logArea.value.includes("要素作業,")) {
+        logArea.value = "要素作業,開始時刻,終了時刻,計測秒,計測日,作業者\\n";
+      }
+      logArea.value += line;
+
+      startTime = null;
+      updateStatus();
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+    });
+
+    function formatDateTime(d) {
+      const pad = (n) => String(n).padStart(2, "0");
+      return (
+        d.getFullYear() + "-" +
+        pad(d.getMonth()+1) + "-" +
+        pad(d.getDate()) + " " +
+        pad(d.getHours()) + ":" +
+        pad(d.getMinutes()) + ":" +
+        pad(d.getSeconds())
+      );
+    }
+
+    // ---- コピー ----
+    document.getElementById("copyBtn").addEventListener("click", () => {
+      logArea.select();
+      document.execCommand("copy");
+      alert("コピーしました。Excelに貼り付けてください。");
+    });
+
+    // ---- タスク編集モーダル ----
+    const modalBackdrop = document.getElementById("taskModalBackdrop");
+    const taskEditor = document.getElementById("taskEditor");
+    const openTaskEditBtn = document.getElementById("openTaskEdit");
+    const cancelTaskEditBtn = document.getElementById("cancelTaskEdit");
+    const saveTaskEditBtn = document.getElementById("saveTaskEdit");
+
+    openTaskEditBtn.addEventListener("click", () => {
+      taskEditor.value = tasks.join("\\n");
+      modalBackdrop.style.display = "flex";
+    });
+
+    cancelTaskEditBtn.addEventListener("click", () => {
+      modalBackdrop.style.display = "none";
+    });
+
+    saveTaskEditBtn.addEventListener("click", () => {
+      const lines = taskEditor.value
+        .split(/\\r?\\n/)
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+      if (lines.length === 0) {
+        alert("1つ以上の要素作業を入力してください。");
+        return;
+      }
+
+      tasks = lines;
+      saveTasks();
+      currentTask = null;
+      startTime = null;
+      renderTaskButtons();
+      updateStatus();
+      modalBackdrop.style.display = "none";
+    });
+
+    // ---- 起動時処理 ----
+    loadTasks();
+    renderTaskButtons();
+    updateStatus();
+  </script>
 </body>
 </html>
